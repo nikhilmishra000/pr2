@@ -14,7 +14,9 @@ class Simulator:
     """ OpenRave simulator """
     def __init__(self, env_file=None, view=False):
         if env_file is None:
-            env_file = rospack.get_path('pr2_utils') + '/robots/my-pr2-beta-sim.robot.xml'
+            # env_file = rospack.get_path('pr2_utils') + '/robots/my-pr2-beta-sim.robot.xml'
+            # Get robot file without having to catkin_make pr2_util package
+            env_file = '/home/dibyo/workspace/pr2' + '/robots/my-pr2-beta-sim.robot.xml'
         self.joint_state_msg = None
         self.joint_state_sub = rospy.Subscriber('/joint_states', sm.JointState, self._joint_state_callback)
         

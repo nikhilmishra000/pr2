@@ -1,4 +1,4 @@
-import roslib, roslib.message
+import roslib, roslib.messagesleep
 import sensor_msgs.msg as sm
 
 import numpy as np

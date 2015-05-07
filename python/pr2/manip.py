@@ -24,7 +24,7 @@ from pr2_utils import utils
 
 import IPython
 
-class Arm:
+class Manip:
     """
     Class for controlling the end effectors of the PR2
     """
@@ -38,26 +38,29 @@ class Arm:
                            "_wrist_roll_joint"]
     
     L_POSTURES = {
-                  'untucked' : [0.4,  1.0,    0.0,  -2.05,  0.0,  -0.1,   0.0],
-                  'tucked'   : [0.06, 1.25,   1.79, -1.68, -1.73, -0.10, -0.09],
-                  'up'       : [0.33, -0.35,  2.59, -0.15,  0.59, -1.41, -0.27],
-                  'side'     : [1.83, -0.33,  1.01, -1.43,  1.1,  -2.10,  3.07],
-                  'mantis'   : [2.03, -0.054, 1.01, -1.47,  0.55, -1.42,  0.82]
+                  'untucked' : [0., 0.4,  1.0,    0.0,  -2.05,  0.0,  -0.1,   0.0],
+                  'tucked'   : [0., 0.06, 1.25,   1.79, -1.68, -1.73, -0.10, -0.09],
+                  'up'       : [0., 0.33, -0.35,  2.59, -0.15,  0.59, -1.41, -0.27],
+                  'side'     : [0., 1.83, -0.33,  1.01, -1.43,  1.1,  -2.10,  3.07],
+                  'mantis'   : [0., 2.03, -0.054, 1.01, -1.47,  0.55, -1.42,  0.82]
                   }
     
     
     def __init__(self, arm_name, sim=None, default_speed=.05):
         """
-        :param arm_name: "left" or "right"
+        :param arm_name: "[left/right]arm[torso/]
         :param sim: OpenRave simulator (or create if None)
         :param default_speed: speed in meters/second
         """
-        assert arm_name == 'left' or arm_name == 'right'
+        assert "left" in arm_name or "right" in arm_name
         
         self.arm_name = arm_name
         self.default_speed = default_speed
         self.tool_frame = '{0}_gripper_tool_frame'.format(arm_name[0])
-        self.joint_names = ['{0}{1}'.format(arm_name[0], joint_name) for joint_name in self.joint_name_suffixes]
+        if "torso" in arm_name:
+            self.joint_names = ['torso_lift_joint']
+        self.joint_names += ['{0}{1}'.format(arm_name[0], joint_name) for joint_name in self.joint_name_suffixes]
+        
         self.gripper_joint_name = '{0}_gripper_joint'.format(arm_name[0])
         self.min_grasp, self.max_grasp = -.01, .1
         self.default_max_effort = 40 # Newtons
@@ -84,7 +87,7 @@ class Arm:
         if self.sim is None:
             self.sim = simulator.Simulator()
             
-        self.manip = self.sim.larm if arm_name == 'left' else self.sim.rarm
+        self.manip = self.sim.get_manip(arm_name)
         
         rospy.sleep(1)
     
@@ -292,7 +295,7 @@ class Arm:
         self.sim.update()
         pose_mat_world = self.sim.transform_from_to(pose.matrix, pose.frame, 'world')
         joints = self.sim.ik_for_link(pose_mat_world, self.manip, self.tool_frame, 0)
-
+        
         if joints is not None:
             joints = self._closer_joint_angles(joints, self.get_joints())
             

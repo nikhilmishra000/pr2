@@ -32,16 +32,18 @@ class Simulator:
             self.env.SetViewer('qtcoin')
         
         self.robot = self.env.GetRobots()[0]
-        self.larm = self.robot.GetManipulator('leftarm')
-        self.rarm = self.robot.GetManipulator('rightarm')
         
-        for arm in [self.larm, self.rarm]:
+        for arm in self.robot.GetManipulators()
             self.robot.SetActiveManipulator(arm)
         
             ikmodel = rave.databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=rave.IkParameterizationType.Transform6D)
             if not ikmodel.load():
                 ikmodel.autogenerate()
         
+        
+    def get_manip(self, name):
+        return self.robot.GetManipulator(name)
+            
     def update(self):
         """
         Updates robot joints to match ROS /joint_states

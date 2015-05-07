@@ -1,4 +1,4 @@
-import roslib, roslib.messagesleep
+import roslib, roslib.message
 import sensor_msgs.msg as sm
 
 import numpy as np
@@ -20,6 +20,7 @@ _DATATYPES[sm.PointField.INT32] = ('i', 4)
 _DATATYPES[sm.PointField.UINT32] = ('I', 4)
 _DATATYPES[sm.PointField.FLOAT32] = ('f', 4)
 _DATATYPES[sm.PointField.FLOAT64] = ('d', 8)
+
 
 def add_convexified_pointcloud_to_env(sim, pc2, transform=np.eye(4), num_cd_components=20, point_cloud_filter=lambda point: True):
     """

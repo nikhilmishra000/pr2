@@ -16,7 +16,7 @@ class Simulator:
         if env_file is None:
             # env_file = rospack.get_path('pr2_utils') + '/robots/my-pr2-beta-sim.robot.xml'
             # Get robot file without having to catkin_make pr2_util package
-            env_file = '/home/dibyo/workspace/pr2' + '/robots/my-pr2-beta-sim.robot.xml'
+            env_file = '/home/nmishra/workspace/apc/data/models/pr2-new-wrists.dae'
         self.joint_state_msg = None
         self.joint_state_sub = rospy.Subscriber('/joint_states', sm.JointState, self._joint_state_callback)
         
@@ -31,10 +31,10 @@ class Simulator:
         if view:
             self.env.SetViewer('qtcoin')
         
-        self.robot = self.env.GetRobots()[0]
+        self.robot = self.env.GetRobot("pr2")
         
-        for arm in self.robot.GetManipulators()
-            self.robot.SetActiveManipulator(arm)
+        for arm in ["rightarm", "rightarm_torso", "leftarm", "leftarm_torso"]:
+            m = self.robot.SetActiveManipulator(arm)
         
             ikmodel = rave.databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=rave.IkParameterizationType.Transform6D)
             if not ikmodel.load():

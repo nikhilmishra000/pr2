@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 import rospy
 import roslib
@@ -9,6 +10,8 @@ roslib.load_manifest("move_base_msgs")
 import trajectory_msgs.msg as tm
 import sensor_msgs.msg as sm
 import pr2_controllers_msgs.msg as pcm
+import move_base_msgs.msg as mbm
+
 #import control_msgs.msg as pcm
 
 
@@ -57,7 +60,7 @@ class Arm:
         self.arm_name = arm_name
         self.default_speed = default_speed
         self.tool_frame = '{0}_gripper_tool_frame'.format(arm_name[0])
-        self.joint_names = ['{0}{1}'.format(arm_name[0], joint_name) for joint_name in self.joint_name_suffixes]
+        self.joint_names = ['{0}{1}'.format(arm_name[0], joint_name) for joint_name in self.joint_name_suffixes] ###
         self.gripper_joint_name = '{0}_gripper_joint'.format(arm_name[0])
         self.min_grasp, self.max_grasp = -.01, .1
         self.default_max_effort = 40 # Newtons
@@ -75,22 +78,47 @@ class Arm:
         rospy.loginfo('Waiting for joint command server...')
         self.joint_command_client.wait_for_server()
         
+        self.torso_height_client = actionlib.SimpleActionClient("torso_controller/position_joint_action", pcm.SingleJointPositionAction)
+        self.torso_height_client.wait_for_server()
+        
+
+        
         #self.gripper_command_pub = rospy.Publisher('{0}_gripper_controller/command'.format(arm_name[0]), pcm.Pr2GripperCommand)
         self.gripper_command_client = actionlib.SimpleActionClient('{0}_gripper_controller/gripper_action'.format(arm_name[0]), pcm.Pr2GripperCommandAction)
         rospy.loginfo('Waiting for gripper command server...')
         self.gripper_command_client.wait_for_server()
+        
+        #rospy.loginfo('Waiting for base command server...')
+        #self.base_command_client = actionlib.SimpleActionClient("move_base", mbm.MoveBaseAction)
+        #self.base_command_client.wait_for_server()
         
         self.sim = sim
         if self.sim is None:
             self.sim = simulator.Simulator()
             
         self.manip = self.sim.larm if arm_name == 'left' else self.sim.rarm
-        
         rospy.sleep(1)
     
     #######################
     # trajectory commands #
     #######################
+    
+    def move_base_simple(self, base_pos):
+        goal = mbm.MoveBaseGoal()
+        goal.target_pose.header.frame_id = "base_link"
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = base_pos[0]
+        goal.target_pose.pose.position.y = base_pos[1]
+        goal.target_pose.pose.orientation.w = 1.0;
+        
+        print goal
+        self.base_command_client.send_goal(goal)
+        self.base_command_client.wait_for_result()
+    
+    def move_torso_simple(self, target_height):
+        target = pcm.SingleJointPositionGoal(target_height, rospy.Duration(2), 1)
+        self.torso_height_client.send_goal(target)
+        self.torso_height_client.wait_for_result()
     
     def execute_pose_trajectory(self, pose_traj, block=True, speed=None):
         """
@@ -114,11 +142,11 @@ class Arm:
             assert len(joints) == len(self.current_joints)
         speed = float(speed) if speed is not None else self.default_speed
         
-        goal = pcm.JointTrajectoryGoal()
+        arm_goal = pcm.JointTrajectoryGoal()
         
         #joint_trajectory = tm.JointTrajectory()
-        goal.trajectory.joint_names = self.joint_names
-        goal.trajectory.header.stamp = rospy.Time.now()
+        arm_goal.trajectory.joint_names = self.joint_names
+        arm_goal.trajectory.header.stamp = rospy.Time.now()
         
         curr_joints = self.current_joints
         time_from_start = 0.
@@ -128,15 +156,16 @@ class Arm:
             duration = ((next_position - curr_position).norm)/speed
             time_from_start += duration
             
-            waypoint = tm.JointTrajectoryPoint()
-            waypoint.positions = next_joints
-            waypoint.time_from_start = rospy.Duration(time_from_start)
+            arm_waypoint = tm.JointTrajectoryPoint()
+            arm_waypoint.positions = next_joints
+            arm_waypoint.time_from_start = rospy.Duration(time_from_start)
             
-            goal.trajectory.points.append(waypoint)
+            arm_goal.trajectory.points.append(arm_waypoint)
             
             curr_joints = next_joints
          
-        self.joint_command_client.send_goal(goal)   
+        self.joint_command_client.send_goal(arm_goal)  
+        
         #self.joint_command_pub.publish(goal.trajectory)
         
         if block:

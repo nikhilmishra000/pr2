@@ -16,7 +16,7 @@ class Simulator:
         if env_file is None:
             # env_file = rospack.get_path('pr2_utils') + '/robots/my-pr2-beta-sim.robot.xml'
             # Get robot file without having to catkin_make pr2_util package
-            env_file = '/home/nmishra/workspace/apc/data/models/pr2-new-wrists.dae'
+            env_file = '/home/nmishra/groovy_ws/apc/data/models/pr2-beta-static.zae'
         self.joint_state_msg = None
         self.joint_state_sub = rospy.Subscriber('/joint_states', sm.JointState, self._joint_state_callback)
         
@@ -31,19 +31,17 @@ class Simulator:
         if view:
             self.env.SetViewer('qtcoin')
         
-        self.robot = self.env.GetRobot("pr2")
+        self.robot = self.env.GetRobots()[0]
+        self.larm = self.robot.GetManipulator('leftarm')
+        self.rarm = self.robot.GetManipulator('rightarm')
         
-        for arm in ["rightarm", "rightarm_torso", "leftarm", "leftarm_torso"]:
-            m = self.robot.SetActiveManipulator(arm)
+        for arm in [self.larm, self.rarm]:
+            self.robot.SetActiveManipulator(arm)
         
             ikmodel = rave.databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=rave.IkParameterizationType.Transform6D)
             if not ikmodel.load():
                 ikmodel.autogenerate()
         
-        
-    def get_manip(self, name):
-        return self.robot.GetManipulator(name)
-            
     def update(self):
         """
         Updates robot joints to match ROS /joint_states
